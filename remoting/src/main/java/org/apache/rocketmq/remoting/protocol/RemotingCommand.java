@@ -31,6 +31,9 @@ import org.apache.rocketmq.remoting.exception.RemotingCommandException;
 import org.apache.rocketmq.logging.InternalLogger;
 import org.apache.rocketmq.logging.InternalLoggerFactory;
 
+/**
+ * 好一个通信协议啊
+ */
 public class RemotingCommand {
     public static final String SERIALIZE_TYPE_PROPERTY = "rocketmq.serialize.type";
     public static final String SERIALIZE_TYPE_ENV = "ROCKETMQ_SERIALIZE_TYPE";
@@ -40,9 +43,13 @@ public class RemotingCommand {
     private static final int RPC_ONEWAY = 1; // 0, RPC
     private static final Map<Class<? extends CommandCustomHeader>, Field[]> CLASS_HASH_MAP =
         new HashMap<Class<? extends CommandCustomHeader>, Field[]>();
+
+    /**
+     * 规范名称缓存
+     */
     private static final Map<Class, String> CANONICAL_NAME_CACHE = new HashMap<Class, String>();
-    // 1, Oneway
-    // 1, RESPONSE_COMMAND
+
+
     private static final Map<Field, Boolean> NULLABLE_FIELD_CACHE = new HashMap<Field, Boolean>();
     private static final String STRING_CANONICAL_NAME = String.class.getCanonicalName();
     private static final String DOUBLE_CANONICAL_NAME_1 = Double.class.getCanonicalName();
@@ -53,11 +60,22 @@ public class RemotingCommand {
     private static final String LONG_CANONICAL_NAME_2 = long.class.getCanonicalName();
     private static final String BOOLEAN_CANONICAL_NAME_1 = Boolean.class.getCanonicalName();
     private static final String BOOLEAN_CANONICAL_NAME_2 = boolean.class.getCanonicalName();
+
+    /**
+     * 配置的版本号
+     */
     private static volatile int configVersion = -1;
+
+    /**
+     * 请求ID
+     */
     private static AtomicInteger requestId = new AtomicInteger(0);
 
     private static SerializeType serializeTypeConfigInThisServer = SerializeType.JSON;
 
+    /**
+     * 根据外部环境的配置获取序列化的额类型
+     */
     static {
         final String protocol = System.getProperty(SERIALIZE_TYPE_PROPERTY, System.getenv(SERIALIZE_TYPE_ENV));
         if (!isBlank(protocol)) {
@@ -69,17 +87,46 @@ public class RemotingCommand {
         }
     }
 
+    /**
+     * 响应结果标识 {@link RemotingSysResponseCode#SYSTEM_BUSY}
+     */
     private int code;
+
+    /**
+     * 编码的类型
+     */
     private LanguageCode language = LanguageCode.JAVA;
     private int version = 0;
+    /**
+     * 不透明的
+     */
     private int opaque = requestId.getAndIncrement();
+
+    /**
+     * 标识
+     */
     private int flag = 0;
+
+    /**
+     * 备注一下子
+     */
     private String remark;
+
+    /**
+     * 扩展的字段信息
+     */
     private HashMap<String, String> extFields;
+
+    /**
+     * 自定义的头信息
+     */
     private transient CommandCustomHeader customHeader;
 
     private SerializeType serializeTypeCurrentRPC = serializeTypeConfigInThisServer;
 
+    /**
+     * 请求体信息
+     */
     private transient byte[] body;
 
     protected RemotingCommand() {
@@ -93,6 +140,10 @@ public class RemotingCommand {
         return cmd;
     }
 
+    /**
+     * 设置版本号
+     * @param cmd
+     */
     private static void setCmdVersion(RemotingCommand cmd) {
         if (configVersion >= 0) {
             cmd.setVersion(configVersion);
@@ -106,10 +157,22 @@ public class RemotingCommand {
         }
     }
 
+    /**
+     * 创建一个相应命令
+     * @param classHeader
+     * @return
+     */
     public static RemotingCommand createResponseCommand(Class<? extends CommandCustomHeader> classHeader) {
         return createResponseCommand(RemotingSysResponseCode.SYSTEM_ERROR, "not set any response code", classHeader);
     }
 
+    /**
+     * 创建一个响应的命令信息
+     * @param code
+     * @param remark
+     * @param classHeader
+     * @return
+     */
     public static RemotingCommand createResponseCommand(int code, String remark,
         Class<? extends CommandCustomHeader> classHeader) {
         RemotingCommand cmd = new RemotingCommand();
@@ -141,12 +204,39 @@ public class RemotingCommand {
         return decode(byteBuffer);
     }
 
+    /**
+     * https://blog.csdn.net/quhongwei_zhanqiu/article/details/39154155
+     * https://www.cnblogs.com/guazi/p/6883679.html
+     * 协议格式 <length> <header length> <header data> <bodydata>
+     *             1        2               3          4
+     * 协议分4部分，含义分别如下
+     * 1、大端4个字节整数，等于2、3、4长度总和
+     * 2、大端4个字节整数，等于3的长度
+     * 3、使用json序列化数据
+     * 4、应用自定义二进制序列化数据
+     *
+     * 所谓的大端模式（Big-endian），是指数据的高字节，保存在内存的低地址中，而数据的低字节，
+     * 保存在内存的高地址中，这样的存储模式有点儿类似于把数据当作字符串顺序处理：地址由小向大增加，而数据从高位往低位放；
+     * https://baike.baidu.com/item/%E5%A4%A7%E5%B0%8F%E7%AB%AF%E6%A8%A1%E5%BC%8F/6750542?fr=aladdin
+     *
+     * 所谓的小端模式（Little-endian），是指数据的高字节保存在内存的高地址中，而数据的低字节保存在内存的低地址中，
+     * 这种存储模式将地址的高低和数据位权有效地结合起来，高地址部分权值高，低地址部分权值低，和我们的逻辑方法一致。
+     *
+     * 具体可以参考{@link #encode()}
+     * @param byteBuffer
+     * @return
+     */
     public static RemotingCommand decode(final ByteBuffer byteBuffer) {
+        //获取字节缓冲区的整个长度，这个长度等于通信协议格式的2、3、4段的总长度
         int length = byteBuffer.limit();
+
+        //从缓冲区中读取4个字节的int类型的数据值 ，这个值就是报文头部的长度
         int oriHeaderLen = byteBuffer.getInt();
+
         int headerLength = getHeaderLength(oriHeaderLen);
 
         byte[] headerData = new byte[headerLength];
+        //接下来从缓冲区中读取headerLength个字节的数据，这个数据就是报文头部的数据
         byteBuffer.get(headerData);
 
         RemotingCommand cmd = headerDecode(headerData, getProtocolType(oriHeaderLen));
@@ -166,6 +256,12 @@ public class RemotingCommand {
         return length & 0xFFFFFF;
     }
 
+    /**
+     * 头部进行编码
+     * @param headerData
+     * @param type
+     * @return
+     */
     private static RemotingCommand headerDecode(byte[] headerData, SerializeType type) {
         switch (type) {
             case JSON:
@@ -326,18 +422,21 @@ public class RemotingCommand {
     }
 
     public ByteBuffer encode() {
-        // 1> header length size
+        // 1> header length size 头4个字节
+        //表示用4个字节来存储头部长度
         int length = 4;
 
-        // 2> header data length
+        // 2> header data length  头的长度
+        //加上头部报文的字节长度
         byte[] headerData = this.headerEncode();
         length += headerData.length;
 
-        // 3> body data length
+        // 3> body data length  body的长度
+        //如果报文体body有数据则加上报文体的字节长度
         if (this.body != null) {
             length += body.length;
         }
-
+        //分配一个  (4+length)这么大的字节缓冲区，这个缓冲区就用来存储上述协议格式的整个报文的数据
         ByteBuffer result = ByteBuffer.allocate(4 + length);
 
         // length
@@ -354,6 +453,7 @@ public class RemotingCommand {
             result.put(this.body);
         }
 
+        //将缓冲区翻转，用于将ByteBuffer放到网络通道中进行传输
         result.flip();
 
         return result;
