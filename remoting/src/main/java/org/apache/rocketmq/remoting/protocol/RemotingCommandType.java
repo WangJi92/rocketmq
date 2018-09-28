@@ -24,5 +24,9 @@ public enum RemotingCommandType {
      * 请求 、响应哦
      */
     REQUEST_COMMAND,
+    /**
+     * 对于之前的答复
+     * A response to a previous request issued by this very participant
+     */
     RESPONSE_COMMAND;
 }

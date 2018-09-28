@@ -33,6 +33,7 @@ import org.apache.rocketmq.logging.InternalLoggerFactory;
 
 /**
  * 好一个通信协议啊
+ * [《RocketMq》一、网络传输篇](https://blog.csdn.net/xxxxxx91116/article/details/50278679)
  */
 public class RemotingCommand {
     public static final String SERIALIZE_TYPE_PROPERTY = "rocketmq.serialize.type";
@@ -88,6 +89,7 @@ public class RemotingCommand {
     }
 
     /**
+     * 用于标示请求类型，参见RequestCode，ResponseCode
      * 响应结果标识 {@link RemotingSysResponseCode#SYSTEM_BUSY}
      */
     private int code;
@@ -98,7 +100,8 @@ public class RemotingCommand {
     private LanguageCode language = LanguageCode.JAVA;
     private int version = 0;
     /**
-     * 不透明的
+     * 不透明的 用于标示请求类型，参见RequestCode，ResponseCod
+     *  每个消息的唯一标志，request和response通过该字段匹配
      */
     private int opaque = requestId.getAndIncrement();
 
