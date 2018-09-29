@@ -19,7 +19,14 @@ package org.apache.rocketmq.remoting.common;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+/**
+ * 只使用一次的信号量与原子类变量的结合
+ * [深入理解Semaphore](https://blog.csdn.net/qq_19431333/article/details/70212663)
+ */
 public class SemaphoreReleaseOnlyOnce {
+    /**
+     * 当前是否已经释放了型号量的标识
+     */
     private final AtomicBoolean released = new AtomicBoolean(false);
     private final Semaphore semaphore;
 
@@ -27,6 +34,9 @@ public class SemaphoreReleaseOnlyOnce {
         this.semaphore = semaphore;
     }
 
+    /**
+     * 释放掉证明已经被使用啦
+     */
     public void release() {
         if (this.semaphore != null) {
             if (this.released.compareAndSet(false, true)) {

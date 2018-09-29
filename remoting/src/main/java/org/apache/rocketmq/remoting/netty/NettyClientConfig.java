@@ -16,28 +16,69 @@
  */
 package org.apache.rocketmq.remoting.netty;
 
+/**
+ * 客户端套接字的配置信息
+ */
 public class NettyClientConfig {
     /**
-     * Worker thread number
+     * Worker thread number 工作线程数据量
      */
     private int clientWorkerThreads = 4;
+    /**
+     * 客户端回调执行线程
+     */
     private int clientCallbackExecutorThreads = Runtime.getRuntime().availableProcessors();
+
+    /**
+     * 客户端单向信号量值
+     */
     private int clientOnewaySemaphoreValue = NettySystemConfig.CLIENT_ONEWAY_SEMAPHORE_VALUE;
+
+    /**
+     * 客户端异步信号量值
+     */
     private int clientAsyncSemaphoreValue = NettySystemConfig.CLIENT_ASYNC_SEMAPHORE_VALUE;
+
+    /**
+     * 连接超时
+     */
     private int connectTimeoutMillis = 3000;
+
+    /**
+     * 通道不活动间隔
+     */
     private long channelNotActiveInterval = 1000 * 60;
 
     /**
+     * 当指定的时间段未执行读写操作时，将触发IDLeSteEvEnter事件， Specify {@code 0} to disable
      * IdleStateEvent will be triggered when neither read nor write was performed for
      * the specified period of this time. Specify {@code 0} to disable
      */
     private int clientChannelMaxIdleTimeSeconds = 120;
 
+    /**
+     * 客户端套接字大学
+     */
     private int clientSocketSndBufSize = NettySystemConfig.socketSndbufSize;
+
+    /**
+     * 客户端收到的套接字大小
+     */
     private int clientSocketRcvBufSize = NettySystemConfig.socketRcvbufSize;
+
+    /**
+     * 客户端池Byte Buf Allocator启用
+     */
     private boolean clientPooledByteBufAllocatorEnable = false;
+
+    /**
+     * 客户端 如果超时关闭客户端套接字
+     */
     private boolean clientCloseSocketIfTimeout = false;
 
+    /**
+     * 使用TLS
+     */
     private boolean useTLS;
 
     public boolean isClientCloseSocketIfTimeout() {

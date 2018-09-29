@@ -188,7 +188,12 @@ public class RemotingUtil {
         return null;
     }
 
+    /**
+     * 关闭当前的连接
+     * @param channel
+     */
     public static void closeChannel(Channel channel) {
+        //获取远程的地址信息
         final String addrRemote = RemotingHelper.parseChannelRemoteAddr(channel);
         channel.close().addListener(new ChannelFutureListener() {
             @Override

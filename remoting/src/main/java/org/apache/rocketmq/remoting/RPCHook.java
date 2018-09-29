@@ -19,9 +19,23 @@ package org.apache.rocketmq.remoting;
 
 import org.apache.rocketmq.remoting.protocol.RemotingCommand;
 
+/**
+ * 注册的钩子函数，方便监听请求之前，响应之前的事件处理，类似一个拦截吧
+ */
 public interface RPCHook {
+    /**
+     * 客户端请求数据到了之前的处理
+     * @param remoteAddr
+     * @param request
+     */
     void doBeforeRequest(final String remoteAddr, final RemotingCommand request);
 
+    /**
+     * 响应给客户端数据的处理
+     * @param remoteAddr
+     * @param request
+     * @param response
+     */
     void doAfterResponse(final String remoteAddr, final RemotingCommand request,
         final RemotingCommand response);
 }

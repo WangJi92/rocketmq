@@ -21,6 +21,7 @@ import org.apache.rocketmq.logging.InternalLogger;
 import org.apache.rocketmq.logging.InternalLoggerFactory;
 
 /**
+ * 后台线程的基类
  * Base class for background thread
  */
 public abstract class ServiceThread implements Runnable {
@@ -28,13 +29,25 @@ public abstract class ServiceThread implements Runnable {
 
     private static final long JOIN_TIME = 90 * 1000;
     protected final Thread thread;
+
+    /**
+     * 已通知
+     */
     protected volatile boolean hasNotified = false;
+
+    /**
+     * 已经停止
+     */
     protected volatile boolean stopped = false;
 
     public ServiceThread() {
         this.thread = new Thread(this, this.getServiceName());
     }
 
+    /**
+     * 设置后太线程的名称
+     * @return
+     */
     public abstract String getServiceName();
 
     public void start() {

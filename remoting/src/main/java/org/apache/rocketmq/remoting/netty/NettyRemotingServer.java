@@ -62,21 +62,58 @@ import org.apache.rocketmq.logging.InternalLogger;
 import org.apache.rocketmq.logging.InternalLoggerFactory;
 import org.apache.rocketmq.remoting.protocol.RemotingCommand;
 
+/**
+ * [深入研究Netty之线程模型详解](https://my.oschina.net/7001/blog/1480153)
+ */
 public class NettyRemotingServer extends NettyRemotingAbstract implements RemotingServer {
     private static final InternalLogger log = InternalLoggerFactory.getLogger(RemotingHelper.ROCKETMQ_REMOTING);
+    /**
+     * 服务器引导程序
+     */
     private final ServerBootstrap serverBootstrap;
+
+    /**
+     * weventLoopGroupSelector 负责处理I/O相关的操作，执行系统Task、定时任务Task等。
+     * https://my.oschina.net/7001/blog/1480153
+     */
     private final EventLoopGroup eventLoopGroupSelector;
+
+    /**
+     * bossGroup负责处理客户端的连接请求
+     * https://my.oschina.net/7001/blog/1480153
+     */
     private final EventLoopGroup eventLoopGroupBoss;
+
+    /**
+     * 服务端的一些配置
+     */
     private final NettyServerConfig nettyServerConfig;
 
+    /**
+     * 公用线程池
+     */
     private final ExecutorService publicExecutor;
+
+    /**
+     * 自定义的事件监听处理器
+     */
     private final ChannelEventListener channelEventListener;
 
     private final Timer timer = new Timer("ServerHouseKeepingService", true);
+
+    /**
+     * 默认的执行线程
+     */
     private DefaultEventExecutorGroup defaultEventExecutorGroup;
 
+    /**
+     * 请求处理钩子
+     */
     private RPCHook rpcHook;
 
+    /**
+     * 端口号
+     */
     private int port = 0;
 
     private static final String HANDSHAKE_HANDLER_NAME = "handshakeHandler";
@@ -99,6 +136,9 @@ public class NettyRemotingServer extends NettyRemotingAbstract implements Remoti
             publicThreadNums = 4;
         }
 
+        /**
+         * 公用执行线程池
+         */
         this.publicExecutor = Executors.newFixedThreadPool(publicThreadNums, new ThreadFactory() {
             private AtomicInteger threadIndex = new AtomicInteger(0);
 
@@ -108,6 +148,9 @@ public class NettyRemotingServer extends NettyRemotingAbstract implements Remoti
             }
         });
 
+        /**
+         * NioEventLoopGroup  NiO事件循环组（1个线程）
+         */
         this.eventLoopGroupBoss = new NioEventLoopGroup(1, new ThreadFactory() {
             private AtomicInteger threadIndex = new AtomicInteger(0);
 
@@ -128,6 +171,9 @@ public class NettyRemotingServer extends NettyRemotingAbstract implements Remoti
                 }
             });
         } else {
+            /**
+             * nio选择线程
+             */
             this.eventLoopGroupSelector = new NioEventLoopGroup(nettyServerConfig.getServerSelectorThreads(), new ThreadFactory() {
                 private AtomicInteger threadIndex = new AtomicInteger(0);
                 private int threadTotal = nettyServerConfig.getServerSelectorThreads();
@@ -142,6 +188,9 @@ public class NettyRemotingServer extends NettyRemotingAbstract implements Remoti
         loadSslContext();
     }
 
+    /**
+     * 处理Https
+     */
     public void loadSslContext() {
         TlsMode tlsMode = TlsSystemConfig.tlsMode;
         log.info("Server is running in TLS {} mode", tlsMode.getName());
@@ -177,16 +226,23 @@ public class NettyRemotingServer extends NettyRemotingAbstract implements Remoti
                     return new Thread(r, "NettyServerCodecThread_" + this.threadIndex.incrementAndGet());
                 }
             });
-
+        //https://blog.csdn.net/xxxxxx91116/article/details/502786
+        //处理过程如下：首先所有的入口都在start函数：如果是input方向，那么会先调用NettyDecoder->NettyConnectManageHandler->NettyServerHandlerNettyDecoder(底层编码)：
+        //会将数据包从byte转为RemotingCommandNettyConnectManageHandler(通信层事件)：会将请求转入channelRegistered、channelUnregistered、channelActive、
+        //channelInactive、userEventTriggered、exceptionCaught，对应的调用NettyRemotingAbstract.putNettyEvent将事件放入Queue中，
+        //等待NettyEventExecuter进行处理NettyServerHandler(业务层事件)：调用注册的<Integer/*request code */, Pair<NettyRequestProcessor, ExecutorService>> processorTable,
+        //进行业务逻辑处理，当processRequestCommand接收到消息时，进行对应的处理
         ServerBootstrap childHandler =
             this.serverBootstrap.group(this.eventLoopGroupBoss, this.eventLoopGroupSelector)
                 .channel(useEpoll() ? EpollServerSocketChannel.class : NioServerSocketChannel.class)
+                //设置一些配置选项
                 .option(ChannelOption.SO_BACKLOG, 1024)
                 .option(ChannelOption.SO_REUSEADDR, true)
                 .option(ChannelOption.SO_KEEPALIVE, false)
                 .childOption(ChannelOption.TCP_NODELAY, true)
                 .childOption(ChannelOption.SO_SNDBUF, nettyServerConfig.getServerSocketSndBufSize())
                 .childOption(ChannelOption.SO_RCVBUF, nettyServerConfig.getServerSocketRcvBufSize())
+                //本地线程信息
                 .localAddress(new InetSocketAddress(this.nettyServerConfig.getListenPort()))
                 .childHandler(new ChannelInitializer<SocketChannel>() {
                     @Override
@@ -197,6 +253,7 @@ public class NettyRemotingServer extends NettyRemotingAbstract implements Remoti
                             .addLast(defaultEventExecutorGroup,
                                 new NettyEncoder(),
                                 new NettyDecoder(),
+                                //超时处理
                                 new IdleStateHandler(0, 0, nettyServerConfig.getServerChannelMaxIdleTimeSeconds()),
                                 new NettyConnectManageHandler(),
                                 new NettyServerHandler()
@@ -390,6 +447,9 @@ public class NettyRemotingServer extends NettyRemotingAbstract implements Remoti
         }
     }
 
+    /**
+     * 来了消息的处理！通过code码
+     */
     class NettyServerHandler extends SimpleChannelInboundHandler<RemotingCommand> {
 
         @Override
@@ -398,6 +458,9 @@ public class NettyRemotingServer extends NettyRemotingAbstract implements Remoti
         }
     }
 
+    /**
+     * in out 的处理
+     */
     class NettyConnectManageHandler extends ChannelDuplexHandler {
         @Override
         public void channelRegistered(ChannelHandlerContext ctx) throws Exception {

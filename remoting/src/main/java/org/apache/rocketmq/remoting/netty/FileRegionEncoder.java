@@ -28,6 +28,8 @@ import java.nio.ByteBuffer;
 import java.nio.channels.WritableByteChannel;
 
 /**
+ *
+ * 默认情况下，文件区域直接传输到Socket通道，称为零拷贝。如果我们需要加密传输，发送的数据应该通过{@link SslHandler}.。这个编码器确保了这个过程。
  * <p>
  *     By default, file region are directly transferred to socket channel which is known as zero copy. In case we need
  *     to encrypt transmission, data being sent should go through the {@link SslHandler}. This encoder ensures this

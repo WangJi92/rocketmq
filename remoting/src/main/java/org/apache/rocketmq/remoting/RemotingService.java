@@ -17,10 +17,23 @@
 
 package org.apache.rocketmq.remoting;
 
+/**
+ * 服务启动身边周期执行基本事件封装
+ */
 public interface RemotingService {
+    /**
+     * 启动事件
+     */
     void start();
 
+    /**
+     * 关闭事件
+     */
     void shutdown();
 
+    /**
+     * 注册一些钩子函数，方便监听，处理强求之前记录信息，请求返回记录信息
+     * @param rpcHook
+     */
     void registerRPCHook(RPCHook rpcHook);
 }

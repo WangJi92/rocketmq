@@ -20,11 +20,29 @@ package org.apache.rocketmq.remoting.netty;
 import io.netty.channel.Channel;
 import org.apache.rocketmq.remoting.protocol.RemotingCommand;
 
+/**
+ * 一个请求处理的任务，不晓得是封装来干啥额，可能是处理来至于客户端的请求
+ */
 public class RequestTask implements Runnable {
+    /**
+     * 处理的线程
+     */
     private final Runnable runnable;
     private final long createTimestamp = System.currentTimeMillis();
+
+    /**
+     * 当前通道
+     */
     private final Channel channel;
+
+    /**
+     * 命令请求的内容
+     */
     private final RemotingCommand request;
+
+    /**
+     * 是否已经停止
+     */
     private boolean stopRun = false;
 
     public RequestTask(final Runnable runnable, final Channel channel, final RemotingCommand request) {

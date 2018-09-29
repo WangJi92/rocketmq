@@ -52,6 +52,11 @@ public class RemotingHelper {
         return sb.toString();
     }
 
+    /**
+     * 这个工具类吧
+     * @param addr
+     * @return
+     */
     public static SocketAddress string2SocketAddress(final String addr) {
         String[] s = addr.split(":");
         InetSocketAddress isa = new InetSocketAddress(s[0], Integer.parseInt(s[1]));
@@ -150,6 +155,11 @@ public class RemotingHelper {
         }
     }
 
+    /**
+     * 获取到远程请求的地址的IP的信息
+     * @param channel
+     * @return
+     */
     public static String parseChannelRemoteAddr(final Channel channel) {
         if (null == channel) {
             return "";
