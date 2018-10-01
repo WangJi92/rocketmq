@@ -24,8 +24,18 @@ import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 
+/**
+ * 了解命令行参数的使用，这个感觉就是最佳的实践
+ * [Apache Commons CLI命令行启动](http://www.cnblogs.com/xing901022/p/5608823.html)
+ */
 public class ServerUtil {
 
+    /**
+     * [Apache Commons CLI命令行启动](http://www.cnblogs.com/xing901022/p/5608823.html)
+     * 根据common.cli 构建 命令行参数
+     * @param options
+     * @return
+     */
     public static Options buildCommandlineOptions(final Options options) {
         Option opt = new Option("h", "help", false, "Print help");
         opt.setRequired(false);
@@ -40,8 +50,24 @@ public class ServerUtil {
         return options;
     }
 
+    /**
+     * [Apache Commons CLI命令行启动](http://www.cnblogs.com/xing901022/p/5608823.html)
+     * 解析命令行参数，如果输入h 打印帮助的信息
+     * @param appName  当前应用的名称用来提示使用的
+     *
+     *  usage: testApp [-c <arg>] [-h] [-p]
+     *  -c,--configFile <arg>   Name server config properties file
+     *  -h,--help               Print help
+     *  -p,--printConfigItem    Print all config item
+     * --------------------------------------
+     * @param args
+     * @param options
+     * @param parser
+     * @return
+     */
     public static CommandLine parseCmdLine(final String appName, String[] args, Options options,
         CommandLineParser parser) {
+        //打印命令行参数帮助信息
         HelpFormatter hf = new HelpFormatter();
         hf.setWidth(110);
         CommandLine commandLine = null;
@@ -58,12 +84,22 @@ public class ServerUtil {
         return commandLine;
     }
 
+    /**
+     * 答应命令行的帮助信息
+     * @param appName
+     * @param options
+     */
     public static void printCommandLineHelp(final String appName, final Options options) {
         HelpFormatter hf = new HelpFormatter();
         hf.setWidth(110);
         hf.printHelp(appName, options, true);
     }
 
+    /**
+     * 获取命令行参数中的值，然后帮助成为Properties 属性哦
+     * @param commandLine
+     * @return
+     */
     public static Properties commandLine2Properties(final CommandLine commandLine) {
         Properties properties = new Properties();
         Option[] opts = commandLine.getOptions();
