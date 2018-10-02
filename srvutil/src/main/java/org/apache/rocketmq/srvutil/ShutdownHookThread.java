@@ -25,11 +25,25 @@ import java.util.concurrent.atomic.AtomicInteger;
 /**
  * {@link ShutdownHookThread} is the standard hook for filtersrv and namesrv modules.
  * Through {@link Callable} interface, this hook can customization operations in anywhere.
+ *
+ * 这个钩子可以在任何地方定制操作。 JVM 关闭钩子的定制化处理
  */
 public class ShutdownHookThread extends Thread {
+
+    /**
+     * 是否已经被执行啦
+     */
     private volatile boolean hasShutdown = false;
+
+    /**
+     * 当前钩子函数被调用的次数
+     */
     private AtomicInteger shutdownTimes = new AtomicInteger(0);
     private final InternalLogger log;
+
+    /**
+     * 回调接口处理
+     */
     private final Callable callback;
 
     /**
@@ -54,10 +68,12 @@ public class ShutdownHookThread extends Thread {
     public void run() {
         synchronized (this) {
             log.info("shutdown hook was invoked, " + this.shutdownTimes.incrementAndGet() + " times.");
+            //增加一些执行控制，确保只被执行一次处理
             if (!this.hasShutdown) {
                 this.hasShutdown = true;
                 long beginTime = System.currentTimeMillis();
                 try {
+                    //执行处理回调哦
                     this.callback.call();
                 } catch (Exception e) {
                     log.error("shutdown hook callback invoked failure.", e);
